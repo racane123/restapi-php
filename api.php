@@ -1,5 +1,24 @@
 <?php
 
+// Allow from any origin
+if (isset($_SERVER['HTTP_ORIGIN'])) {
+    header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
+    header('Access-Control-Allow-Credentials: true');
+    header('Access-Control-Max-Age: 86400');    // cache for 1 day
+}
+
+// Access-Control headers are received during OPTIONS requests
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+
+    if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_METHOD']))
+        header("Access-Control-Allow-Methods: GET, POST, OPTIONS");         
+
+    if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']))
+        header("Access-Control-Allow-Headers: {$_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']}");
+
+    exit(0);
+}
+
 $requestMethod = $_SERVER['REQUEST_METHOD'];
 
 switch ($requestMethod) {
@@ -16,11 +35,15 @@ switch ($requestMethod) {
 
     case 'POST':    
         $postData = json_decode(file_get_contents('php://input'), true);
+
         if ($postData) {
-                $postData = array(
-                    "title" => $postData["title"],
-                    "message" => $postData["message"],
-                );
+            $postData = array(
+                "name" => $postData["name"],
+                "title" => $postData['title'],
+                "area" => $postData["area"],
+                "price" => $postData["price"],
+            );
+            //file_put_contents('received_data.log', print_r($postData, true), FILE_APPEND);
             $success = insertDataIntoDatabase($postData);
             if ($success) {
                 echo json_encode(['method' => 'POST', 'message' => 'Data inserted successfully']);
@@ -45,7 +68,7 @@ switch ($requestMethod) {
 function getDataFromDatabase()
 {
 
-    $conn = mysqli_connect('localhost', 'root', '', 'testdb', 3308);
+    $conn = mysqli_connect('localhost', 'root', '', 'testdb', 3306);
 
     if (!$conn) {
 
@@ -53,7 +76,7 @@ function getDataFromDatabase()
     }
 
 
-    $query = "SELECT * FROM testpost";
+    $query = "SELECT * FROM landcomp";
     $result = mysqli_query($conn, $query);
 
     if (!$result) {
@@ -72,17 +95,18 @@ function getDataFromDatabase()
 
 function insertDataIntoDatabase($data)
 {
-    $conn = mysqli_connect('localhost', 'root', '', 'testdb', 3308);
+    $conn = mysqli_connect('localhost', 'root', '', 'testdb', 3306);
 
     if (!$conn) {
         return false;
     }
 
+    $name = mysqli_real_escape_string($conn, $data['name']);
     $title = mysqli_real_escape_string($conn, $data['title']);
-    $message = mysqli_real_escape_string($conn, $data['message']);
+    $area = mysqli_real_escape_string($conn, $data['area']);
+    $price = mysqli_real_escape_string($conn, $data['price']);
 
-    $query = "INSERT INTO testpost (title, message) VALUES ('$title', '$message')";
-
+    $query = "INSERT INTO landcomp (name, title, area, price) VALUES ('$name','$title', '$area', '$price')";
 
     $success = mysqli_query($conn, $query);
 
@@ -90,4 +114,3 @@ function insertDataIntoDatabase($data)
 
     return $success;
 }
-
